@@ -3,6 +3,7 @@ from flask_cors import CORS
 import os
 import time
 import sys
+import logging  # ← THIS WAS MISSING
 
 app = Flask(__name__)
 
