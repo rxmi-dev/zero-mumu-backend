@@ -2,10 +2,11 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import time
+import sys
 
 app = Flask(__name__)
 
-# Allow all origins
+# Allow all origins for now (you can restrict later)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
 # NTA 2025 Configuration
@@ -197,7 +198,25 @@ def tax_bands():
     ]
     return jsonify({'success': True, 'data': bands})
 
+# This is CRITICAL for Render - MUST be at the very bottom
+if __name__ != '__main__':
+    # When Gunicorn imports this file, we need to ensure the app is bound
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
+    # Get port from environment variable (Render sets this automatically)
+    port = int(os.environ.get('PORT', 10000))
+    print(f"\n{'='*60}")
     print(f"🔥 ZERO MUMU TAX BACKEND STARTING ON PORT {port}")
+    print(f"{'='*60}\n")
+    print(f"📍 Health check: http://0.0.0.0:{port}/health")
+    print(f"📍 Tax bands: http://0.0.0.0:{port}/api/v1/tax-bands")
+    print(f"{'='*60}\n")
+    
+    # Force stdout to flush immediately
+    sys.stdout.flush()
+    
+    # Bind to 0.0.0.0 and the correct port
     app.run(host='0.0.0.0', port=port, debug=False)
