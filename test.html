@@ -1,0 +1,93 @@
+async function calculate() {
+    const income = document.getElementById('income').value;
+    const basic = document.getElementById('basic').value;
+    
+    const data = {
+        gross_income: parseFloat(income) || 0,
+        basic_salary: parseFloat(basic) || 0,
+        housing_allowance: 1000000,
+        transport_allowance: 600000,
+        rent_paid: 2000000,
+        life_insurance: 100000,
+        paye_deducted: 900000,
+        crypto_gains: 0,
+        capital_gains: 0,
+        severance_pay: 0,
+        mortgage_interest: 0
+    };
+    
+    document.getElementById('debug').innerHTML = 
+        'Sending to: http://localhost:5000/api/v1/calculate/pit<br>' + 
+        'Data:<br>' + JSON.stringify(data, null, 2);
+    
+    try {
+        // Test if backend is reachable first
+        const healthCheck = await fetch('http://localhost:5000/health');
+        if (!healthCheck.ok) {
+            throw new Error('Backend not reachable');
+        }
+        
+        document.getElementById('debug').innerHTML += 
+            '<br><br>✓ Backend is reachable';
+        
+        // Now send the calculation request
+        const response = await fetch('http://localhost:5000/api/v1/calculate/pit', {
+            method: 'POST',
+            mode: 'cors',  // Explicitly enable CORS
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        document.getElementById('debug').innerHTML += 
+            '<br><br>✓ Request sent, status: ' + response.status;
+        
+        const result = await response.json();
+        
+        document.getElementById('debug').innerHTML += 
+            '<br><br>Response:<br>' + 
+            JSON.stringify(result, null, 2);
+        
+        if (result.success) {
+            const tax = result.data;
+            let html = '<h3>Tax Result</h3>';
+            
+            if (tax.exempt) {
+                html += '<p style="color: green">🎉 TAX EXEMPT!</p>';
+                html += `<p>Minimum Wage: ₦${tax.minimum_wage?.toLocaleString() || 0}</p>`;
+            } else {
+                html += `<p>Total Gross Income: ₦${tax.total_gross_income?.toLocaleString() || 0}</p>`;
+                html += `<p>Total Deductions: ₦${tax.total_deductions?.toLocaleString() || 0}</p>`;
+                html += `<p>Chargeable Income: ₦${tax.chargeable_income?.toLocaleString() || 0}</p>`;
+                html += `<p><strong>Tax Payable: ₦${tax.tax_payable?.toLocaleString() || 0}</strong></p>`;
+                
+                if (tax.result_type === 'refund') {
+                    html += `<p style="color: green; font-size: 1.2em;">💰 Refund Due: ₦${tax.refund_amount?.toLocaleString() || 0}</p>`;
+                } else if (tax.result_type === 'additional') {
+                    html += `<p style="color: orange; font-size: 1.2em;">⚠️ Additional Tax: ₦${tax.additional_tax?.toLocaleString() || 0}</p>`;
+                } else {
+                    html += `<p style="color: blue;">✓ Tax Fully Paid</p>`;
+                }
+            }
+            
+            document.getElementById('result').innerHTML = html;
+        } else {
+            document.getElementById('result').innerHTML = 
+                '<p style="color: red">Error: ' + (result.error || 'Unknown error') + '</p>';
+        }
+        
+    } catch (error) {
+        document.getElementById('debug').innerHTML += 
+            '<br><br>❌ Fetch Error:<br>' + error.message;
+        document.getElementById('result').innerHTML = 
+            '<p style="color: red">Error: ' + error.message + '</p>' +
+            '<p>Check if:</p>' +
+            '<ul>' +
+            '<li>Backend is running (python run.py)</li>' +
+            '<li>No firewall blocking port 5000</li>' +
+            '<li>Try: http://localhost:5000/health in new tab</li>' +
+            '</ul>';
+    }
+}
