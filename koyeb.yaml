@@ -1,0 +1,9 @@
+name: zero-mumu-backend
+service:
+  port: 8000
+  env:
+    - name: PORT
+      value: "8000"
+routes:
+  - path: /
+    port: 8000
