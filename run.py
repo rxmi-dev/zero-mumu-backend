@@ -1,18 +1,12 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import os
 import time
 
 app = Flask(__name__)
 
-# CORS - Wide open for development
+# Allow all origins
 CORS(app, resources={r"/*": {"origins": "*"}})
-
-@app.after_request
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    return response
 
 # NTA 2025 Configuration
 MINIMUM_WAGE = 70000 * 12  # ₦840,000 annually
@@ -66,8 +60,7 @@ def health():
     return jsonify({
         'status': 'healthy',
         'service': 'Zero Mumu Tax API',
-        'version': 'NTA 2025',
-        'port': 5000
+        'version': 'NTA 2025'
     })
 
 @app.route('/api/v1/calculate/pit', methods=['POST', 'OPTIONS'])
@@ -88,7 +81,7 @@ def calculate_pit():
         life = float(data.get('life_insurance', 0))
         paye = float(data.get('paye_deducted', 0))
         
-        # NEW: Severance, Crypto, Capital Gains
+        # Severance, Crypto, Capital Gains
         severance = float(data.get('severance_pay', 0))
         crypto = float(data.get('crypto_gains', 0))
         capital = float(data.get('capital_gains', 0))
@@ -109,7 +102,7 @@ def calculate_pit():
         severance_taxable = max(0, severance - 50000000)
         severance_tax = calculate_tax_2025(severance_taxable) if severance_taxable > 0 else 0
         
-        # Check minimum wage exemption (on regular income only)
+        # Check minimum wage exemption
         if total_income <= MINIMUM_WAGE and total_income > 0:
             return jsonify({
                 'success': True,
@@ -122,7 +115,7 @@ def calculate_pit():
                 'timestamp': int(time.time())
             })
         
-        # Calculate chargeable income from regular income
+        # Calculate chargeable income
         chargeable = max(0, total_income - total_deductions)
         
         # Calculate tax on regular income
@@ -205,9 +198,6 @@ def tax_bands():
     return jsonify({'success': True, 'data': bands})
 
 if __name__ == '__main__':
-    print("="*60)
-    print("🔥 ZERO MUMU TAX BACKEND - NTA 2025")
-    print("📍 http://localhost:5000")
-    print("🩺 Health: http://localhost:5000/health")
-    print("="*60)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    print(f"🔥 ZERO MUMU TAX BACKEND STARTING ON PORT {port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
